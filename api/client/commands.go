@@ -1773,7 +1773,6 @@ func (cli *DockerCli) CmdPs(args ...string) error {
 			image = "<no image>"
 		}
 
-		// TODO Add print labels
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s ago\t%s\t%s\t%s\t%s\t", outID, image, outCommand,
 			units.HumanDuration(time.Now().UTC().Sub(time.Unix(out.GetInt64("Created"), 0))),
 			out.Get("Status"), api.DisplayablePorts(ports), strings.Join(outNames, ","), outLabels)
