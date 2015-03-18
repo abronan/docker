@@ -1699,7 +1699,7 @@ func (cli *DockerCli) CmdPs(args ...string) error {
 
 	w := tabwriter.NewWriter(cli.out, 20, 1, 3, ' ', 0)
 	if !*quiet {
-		fmt.Fprint(w, "CONTAINER ID\tIMAGE\tCOMMAND\tCREATED\tSTATUS\tPORTS\tNAMES")
+		fmt.Fprint(w, "CONTAINER ID\tIMAGE\tCOMMAND\tCREATED\tSTATUS\tPORTS\tNAMES\tLABELS")
 
 		if *size {
 			fmt.Fprintln(w, "\tSIZE")
@@ -1733,9 +1733,27 @@ func (cli *DockerCli) CmdPs(args ...string) error {
 			outNames   = stripNamePrefix(out.GetList("Names"))
 			outCommand = strconv.Quote(out.Get("Command"))
 			ports      = engine.NewTable("", 0)
+			labels     = out.Get("Labels")
 		)
 
+		var data map[string]string
+		err := json.Unmarshal([]byte(labels), &data)
+		if err != nil {
+			log.Error(err)
+		}
+
+		var buf bytes.Buffer
+		for key, value := range data {
+			buf.WriteString(key)
+			buf.WriteString("=")
+			buf.WriteString(value)
+			buf.WriteString(",")
+		}
+		outLabels := buf.String()
+		outLabels = strings.TrimSuffix(outLabels, ",")
+
 		if !*noTrunc {
+			outLabels = utils.Trunc(outLabels, 20)
 			outCommand = utils.Trunc(outCommand, 20)
 
 			// only display the default name for the container with notrunc is passed
@@ -1755,9 +1773,10 @@ func (cli *DockerCli) CmdPs(args ...string) error {
 			image = "<no image>"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s ago\t%s\t%s\t%s\t", outID, image, outCommand,
+		// TODO Add print labels
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s ago\t%s\t%s\t%s\t%s\t", outID, image, outCommand,
 			units.HumanDuration(time.Now().UTC().Sub(time.Unix(out.GetInt64("Created"), 0))),
-			out.Get("Status"), api.DisplayablePorts(ports), strings.Join(outNames, ","))
+			out.Get("Status"), api.DisplayablePorts(ports), strings.Join(outNames, ","), outLabels)
 
 		if *size {
 			if out.GetInt("SizeRootFs") > 0 {
